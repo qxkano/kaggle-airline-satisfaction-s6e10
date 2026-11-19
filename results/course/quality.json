@@ -1,0 +1,18 @@
+[
+  {
+    "source": "train.csv",
+    "sha256": "2313b65c74e6994f01c2628aae82d2f97aa6f74a81950172ff83864837c98b36",
+    "input_rows": 699635,
+    "stored_rows": 699635,
+    "missing_arrival": 292,
+    "known_labels": 699635
+  },
+  {
+    "source": "test.csv",
+    "sha256": "ff7932747f27c5274de904194ac38b4d088ea4f9bb005ae74f0d619fb893a9b6",
+    "input_rows": 299844,
+    "stored_rows": 299844,
+    "missing_arrival": 130,
+    "known_labels": 0
+  }
+]
