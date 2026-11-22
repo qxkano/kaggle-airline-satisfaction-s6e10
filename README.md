@@ -1,26 +1,37 @@
-# 航空旅客满意度的数据管理、预测与可视化分析
+# 航空旅客满意度的数据管理、建模预测与可视化分析
 
-本项目以 Kaggle Playground Series S6E10 合成数据为例，把官方 CSV 转换为可查询的旅客记录表，训练单棵决策树并逐条生成预测；最后分别分析已观测的满意率、拟合与留出误差、无标签记录的预测分布。
+本项目基于 Kaggle Playground Series S6E10 合成数据集，围绕数据科学课程的核心流程，完成了从原始 CSV 校验清洗、SQLite 关系型入库、单棵决策树分类建模与批量预测，到多维度可视化分析与结果核对的完整实验。
 
-[阅读课程论文](文档/课程论文.md) · [实验结果与核对记录](文档/实验结果报告.md) · [论文各节与证据对照](文档/实验结论与论文写作依据.md)
 
-## 复现课程实验
+[查看课程论文（Word）](文档/数据科学课程论文.docx)
 
-1. 从 [比赛数据页](https://www.kaggle.com/competitions/playground-series-s6e10/data) 下载官方压缩包，在本项目下新建 `data/raw/`，将 `train.csv` 和 `test.csv` 解压到其中。
-2. 使用 Python 3.12 创建并激活虚拟环境。在项目根目录运行 `python -m pip install -r requirements-course.txt`。
-3. 依次运行 `python src/course_pipeline.py` 和 `python src/course_tree.py`。Windows PowerShell 也可执行 `./run.ps1`。如果 Python 位于其他目录，使用 `./run.ps1 -Python '解释器完整路径'`。
-4. 打开 `results/course/` 查看质量记录、拟合与留出指标、预测结果和分组图。数据库在 `data/processed/airline.sqlite`，可用 SQLite 客户端查询。再次运行会从原始 CSV 重建数据库和汇总结果。重建时需要同时容纳新旧两个数据库文件。
+## 实验复现步骤
 
-## 从记录到图表
+1. 前往 Kaggle Playground Series S6E10 比赛数据页下载官方压缩包，在项目根目录下新建 `data/raw/` 文件夹，并将 `train.csv` 与 `test.csv` 解压至该目录。
+2. 建议使用 Python 3.12 创建并激活独立虚拟环境，在项目根目录执行以下命令安装依赖：
+   ```bash
+   python -m pip install -r requirements-course.txt
+   ```
+3. 依次运行数据处理与建模脚本：
+   ```bash
+   python src/course_pipeline.py
+   python src/course_tree.py
+   ```
+   在 Windows PowerShell 环境下也可直接执行 `./run.ps1` 一键运行；如需指定其他路径的 Python 解释器，可执行 `./run.ps1 -Python '解释器完整路径'`。
+4. 运行完成后，可在 `results/course/` 目录查看数据质量校验记录、拟合与留出集评估指标、无标签测试集预测结果及全部统计图表；清洗后的明细数据库保存在 `data/processed/airline.sqlite`，支持直接使用 SQLite 客户端进行 SQL 查询。重新运行流水线时会先写入临时库并通过完整性核验后再替换旧库，因此磁盘需预留足够空间以同时容纳新旧两个数据库文件。
 
-| 环节 | 处理 | 产物 |
-|---|---|---|
-| 采集与预处理 | 每批读取 50,000 行，校验字段、评分范围和标签，保留到达延误的缺失状态 | [文件指纹与行数核对](results/course/quality.json) |
-| 存储与管理 | 使用 id 主键和 split 来源字段，核对入库行数、缺失数和已知标签数 | 本地 SQLite 的 responses 表 |
-| 分析方法与工具 | 用 SQL 按舱位汇总，再按出行目的下钻；用 Pandas 接收查询结果 | [舱位](results/course/cabin.csv)、[舱位与出行目的](results/course/cabin_travel.csv)、[到达延误](results/course/arrival.csv) |
-| 训练与预测 | 决策树拟合、留出评价、对无标签记录输出概率 | [拟合与留出指标](results/course/fit_holdout.csv)、[预测分组](results/course/prediction_cabin.csv) |
-| 可视化分析 | 对照观测数据、训练效果与待预测记录的输出 | [原始分层](results/course/satisfaction_groups.png)、[拟合与留出](results/course/fit_holdout.png)、[预测分布](results/course/prediction_profile.png) |
+## 数据处理与分析流程
 
-## 课程决策树预测
+| 课程环节 | 核心处理逻辑 | 主要输出产物 |
+| :--- | :--- | :--- |
+| 数据采集与预处理 | 按每批 50,000 行流式读取原始 CSV，校验字段名、服务评分范围（0—5）与非负数值约束，保留到达延误缺失状态 | `quality.json`（SHA-256 文件指纹与行数核对） |
+| 数据存储与管理 | 以 `id` 为主键、`split` 区分来源写入 SQLite，强制约束标签取值并建立 `(split, "Class", "Type of Travel")` 组合索引 | `data/processed/airline.sqlite`（`responses` 表） |
+| 探索性分析与统计 | 通过 SQL 按舱位、出行目的与到达延误区间分组聚合，交由 Pandas 整理制表与绘图 | `cabin.csv`、`cabin_travel.csv`、`arrival.csv` |
+| 模型训练与预测 | 基于信息熵准则训练最大深度为 6 的决策树，在 20% 分层留出集上评估并对无标签测试集逐条评分 | `fit_holdout.csv`、`tree_metrics.json`、`tree_predictions.csv` |
+| 可视化与结果核对 | 对照原始观测分组差异、模型拟合与留出表现、树深边际贡献及待预测样本概率分布 | 论文图 1—5 及 `tree_rules.png` |
 
-从清洗后的 SQLite 读取数据，按满意标签分层留出 20% 评估。一次运行会生成 [评估指标](results/course/tree_metrics.json)、[树的上层规则](results/course/tree_rules.png)、[ROC 与混淆矩阵](results/course/tree_evaluation.png)，并在本地保存 `models/course_tree.joblib` 及 `results/course/tree_predictions.csv`。后者按 id 输出官方测试集中每一行的满意概率。[Word 论文](文档/课程论文.docx) · [PDF 论文](文档/课程论文.pdf)
+## 决策树建模与输出说明
+
+建模脚本从清洗后的 SQLite `responses` 表中提取 699,635 条有标签记录，按满意度标签分层留出 20%（139,927 条）作为评估集，其余 80%（559,708 条）用于拟合。模型采用信息熵分裂准则，限定最大深度为 6、叶节点最小样本数为 200，最终生成含 58 个叶节点的决策树，留出集 ROC-AUC 为 0.9444，准确率为 90.17%。
+
+单次运行除输出评估指标、树的上层分裂规则（`tree_rules.png`）、ROC 曲线与混淆矩阵（`tree_evaluation.png`）外，还会将预处理器与模型打包保存至 `models/course_tree.joblib`，并在 `results/course/tree_predictions.csv` 中按 `id` 输出官方测试集全部 299,844 条记录的预测满意概率。
