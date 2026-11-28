@@ -17,7 +17,7 @@ from sklearn.metrics import (accuracy_score, confusion_matrix, ConfusionMatrixDi
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.tree import DecisionTreeClassifier
 
 from stage_analysis import write_depth_curve, write_stage_analysis
 from course_pipeline import CATEGORIES, DB, OUT, ROOT
@@ -25,7 +25,7 @@ from course_pipeline import CATEGORIES, DB, OUT, ROOT
 SEED = 42
 
 
-def draw(model, y, scores, classes):
+def draw_evaluation(y, scores, classes):
     fig, (a, b) = plt.subplots(1, 2, figsize=(8.4, 3.6), layout="constrained")
     fpr, tpr, _ = roc_curve(y, scores)
     a.plot(fpr, tpr, color="#176b87", label=f"AUC = {roc_auc_score(y, scores):.4f}")
@@ -36,13 +36,6 @@ def draw(model, y, scores, classes):
                                             cmap="Blues", colorbar=False, values_format=",d")
     b.set_title("B. Holdout classification")
     fig.savefig(OUT / "tree_evaluation.png", dpi=200)
-    plt.close(fig)
-    fig, ax = plt.subplots(figsize=(13, 5), layout="constrained")
-    transform, tree = model.steps[0][1], model.steps[1][1]
-    plot_tree(tree, feature_names=list(transform.get_feature_names_out()), max_depth=2,
-              class_names=["Other", "Satisfied"], filled=True, rounded=True, impurity=False,
-              proportion=True, fontsize=8, ax=ax)
-    fig.savefig(OUT / "tree_rules.png", dpi=200)
     plt.close(fig)
 
 
@@ -73,7 +66,7 @@ def main():
                    precision=precision_score(yv,pred), recall=recall_score(yv,pred),
                    f1=f1_score(yv,pred), matrix=confusion_matrix(yv,pred).tolist())
     OUT.mkdir(parents=True, exist_ok=True)
-    draw(model, yv, prob, pred)
+    draw_evaluation(yv, prob, pred)
     # Use the evaluated tree for both the saved model and the delivered predictions.
     path = ROOT / "models/course_tree.joblib"
     path.parent.mkdir(exist_ok=True)
